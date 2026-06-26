@@ -27,13 +27,20 @@ export function useVendeurs() {
   useEffect(() => { fetchVendeurs() }, [])
 
   async function createVendeur(values, produitAssignations) {
-    const url_unique = nanoid(10)
-    const { data: vendeur, error } = await supabase
-      .from('vendeurs')
-      .insert([{ ...values, url_unique }])
-      .select()
-      .single()
-    if (error) throw error
+    // Réessaie avec un nouveau nanoid en cas de conflit (409)
+    let vendeur, error
+    for (let i = 0; i < 3; i++) {
+      const url_unique = nanoid(12)
+      const res = await supabase
+        .from('vendeurs')
+        .insert([{ ...values, url_unique }])
+        .select()
+        .single()
+      vendeur = res.data
+      error = res.error
+      if (!error || error.code !== '23505') break
+    }
+    if (error) throw new Error(error.message || JSON.stringify(error))
 
     if (produitAssignations.length > 0) {
       const liens = produitAssignations.map(a => ({
