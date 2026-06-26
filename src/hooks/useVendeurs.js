@@ -83,9 +83,11 @@ export function useVendeurs() {
   }
 
   async function deleteVendeur(id) {
+    // Supprimer dans l'ordre : ventes → vendeur_produits → vendeur
+    await supabase.from('ventes').delete().eq('vendeur_id', id)
     await supabase.from('vendeur_produits').delete().eq('vendeur_id', id)
     const { error } = await supabase.from('vendeurs').delete().eq('id', id)
-    if (error) throw error
+    if (error) throw new Error(error.message || JSON.stringify(error))
     await fetchVendeurs()
   }
 
